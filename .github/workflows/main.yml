@@ -21,13 +21,22 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Deploy to VM
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        VM_IP: ${{ secrets.VM_IP }}
-        VM_USER: ${{ secrets.VM_USER }}
+    - name: Set up SSH key
       run: |
-        echo "$SSH_PRIVATE_KEY" | ssh-agent bash -c "ssh-add -; \
-        ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP 'sudo pkill node || true; \
-        cd ~/simple-backend-api || git clone https://github.com/parasjain2810/Fwd-assignment.git ~/simple-backend-api; \
-        cd ~/simple-backend-api && git pull && npm install && sudo node index.js &'"
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.VM_IP }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to VM
+      run: |
+        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} << 'EOF'
+          sudo pkill node || true
+          if [ ! -d "~/simple-backend-api" ]; then
+            git clone https://github.com/parasjain2810/Fwd-assignment.git ~/simple-backend-api
+          fi
+          cd ~/simple-backend-api
+          git pull
+          npm install
+          sudo node index.js &
+        EOF
