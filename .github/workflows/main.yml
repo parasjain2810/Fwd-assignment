@@ -1,0 +1,33 @@
+name: Deploy API
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Deploy to VM
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        VM_IP: ${{ secrets.VM_IP }}
+        VM_USER: ${{ secrets.VM_USER }}
+      run: |
+        echo "$SSH_PRIVATE_KEY" | ssh-agent bash -c "ssh-add -; \
+        ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP 'sudo pkill node || true; \
+        cd ~/simple-backend-api || git clone https://github.com/parasjain2810/Fwd-assignment.git ~/simple-backend-api; \
+        cd ~/simple-backend-api && git pull && npm install && sudo node index.js &'"
