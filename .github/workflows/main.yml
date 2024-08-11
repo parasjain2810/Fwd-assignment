@@ -1,4 +1,4 @@
-name: Deploy API
+name: Deploy Backend API
 
 on:
   push:
@@ -10,34 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '14'
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Set up SSH key
-      run: |
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > id_rsa
-        chmod 600 id_rsa
-        mkdir -p ~/.ssh
-        mv id_rsa ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.VM_IP }} >> ~/.ssh/known_hosts
-
-    - name: Deploy to VM
-      run: |
-        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} << 'EOF'
-          sudo pkill node || true
-          if [ ! -d "~/simple-backend-api" ]; then
-            git clone https://github.com/parasjain2810/Fwd-assignment.git ~/simple-backend-api
-          fi
-          cd ~/simple-backend-api
-          git pull
-          npm install
-          sudo node index.js &
-        EOF
+      - name: Deploy to VM
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $USERNAME@$HOST << 'EOF'
+            cd /path/to/deployment
+            git pull origin main
+            npm install
+            pm2 restart index.js
+          EOF
